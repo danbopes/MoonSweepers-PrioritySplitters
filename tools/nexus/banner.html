@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Priority Splitters header</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; width: 1300px; height: 372px; overflow: hidden; background: #07090d; font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+  #backdrop { position: absolute; inset: 0; width: 1300px; height: 372px; object-fit: cover; }
+  #fallback { position: absolute; inset: 0; background:
+      radial-gradient(ellipse at 70% 115%, #3a3f46 0%, #1b1e24 35%, #0a0c10 70%);
+  }
+  #shade { position: absolute; inset: 0; background:
+      linear-gradient(90deg, rgba(6,8,12,0.95) 0%, rgba(6,8,12,0.85) 40%, rgba(6,8,12,0.25) 60%, rgba(6,8,12,0.0) 75%),
+      linear-gradient(180deg, rgba(6,8,12,0.45) 0%, rgba(6,8,12,0) 28%, rgba(6,8,12,0) 75%, rgba(6,8,12,0.55) 100%);
+  }
+  canvas#gl { position: absolute; inset: 0; }
+  #text { position: absolute; left: 56px; top: 54px; width: 760px; color: #e8ecef; }
+  #game { font-size: 18px; font-weight: 600; letter-spacing: 0.22em; color: #c3ccd3; }
+  #title { font-size: 84px; font-weight: 800; line-height: 1.0; letter-spacing: -0.02em; margin-top: 8px; white-space: nowrap; color: #ffffff; text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
+  #sub { font-size: 26px; font-weight: 600; color: #5bd3f0; margin-top: 12px; }
+  ul { display: none; }
+  li { font-size: 30px; font-weight: 500; color: #d6dde2; margin: 0 0 20px 0; padding-left: 38px; position: relative; }
+  li::before { content: ""; position: absolute; left: 6px; top: 15px; width: 12px; height: 12px; border-radius: 50%; background: #5bd3f0; box-shadow: 0 0 12px #5bd3f0aa; }
+  #prompt { display: none; position: absolute; left: var(--px, 1215px); top: var(--py, 150px); display: flex; align-items: center; gap: 18px; background: rgba(10,12,16,0.72); border: 1px solid rgba(255,255,255,0.14); border-radius: 14px; padding: 16px 26px 16px 18px; backdrop-filter: blur(6px); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+  #prompt .key { width: 56px; height: 56px; border-radius: 10px; background: #f2f4f6; color: #10141a; font-weight: 800; font-size: 34px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 -5px 0 #b9c1c8; }
+  #prompt .label { color: #f2f4f6; font-size: 30px; font-weight: 600; }
+  #prompt .label span { color: #5bd3f0; }
+  #ver { position: absolute; right: 28px; bottom: 16px; font-size: 16px; font-weight: 600; color: #8e99a3; letter-spacing: 0.06em; }
+  #prompt { display: none !important; }
+</style>
+</head>
+<body>
+  <div id="fallback"></div>
+  <img id="backdrop" src="backdrop.png" onerror="this.style.display='none'">
+  <div id="shade"></div>
+  <canvas id="gl" width="1300" height="372"></canvas>
+  <div id="text">
+    <div id="game">MOON SWEEPERS</div>
+    <div id="title">Priority Splitters</div>
+    <div id="sub">Decide which belt goes first</div>
+    <ul>
+      <li>Splitters fill one output and only overflow when it backs up</li>
+      <li>Mergers take one input first and let the other in when it is clear</li>
+      <li>Press P at a machine: left first, right first or round-robin</li>
+      <li>The S and M cones lean toward the priority lane</li>
+      <li>Saved per save slot, vanilla until you toggle</li>
+    </ul>
+  </div>
+  <div id="prompt"><div class="key">P</div><div class="label">Change priority <span>(left first)</span></div></div>
+  <div id="ver">BepInEx 6 &middot; v1.0.0</div>
+
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+<script type="module">
+import * as THREE from 'three';
+
+const PALETTE = [
+  { color: 0xeaecee, roughness: 0.32, metalness: 0.0 },   // porcelain ivory polymer
+  { color: 0xf97f2c, roughness: 0.34, metalness: 0.0 },   // tangerine safety trim
+  { color: 0x333e48, roughness: 0.38, metalness: 0.28 },  // graphite chassis
+  { color: 0x2c3138, roughness: 0.75, metalness: 0.05 },  // molded belt
+  { color: 0x35b8da, roughness: 0.25, metalness: 0.0, emissive: 0x31adcd, emissiveIntensity: 0.55 }, // cyan diffuser
+  { color: 0x8c9aa2, roughness: 0.3, metalness: 0.7 },    // brushed hardware
+];
+const materials = PALETTE.map(p => new THREE.MeshStandardMaterial(p));
+
+function parseScene(buf) {
+  const dv = new DataView(buf);
+  let pos = 4;
+  const pivot = [dv.getFloat32(pos, true), dv.getFloat32(pos + 4, true), dv.getFloat32(pos + 8, true)]; pos += 12;
+  const parts = dv.getUint32(pos, true); pos += 4;
+  const out = [];
+  for (let p = 0; p < parts; p++) {
+    const n = dv.getUint32(pos, true), subs = dv.getUint32(pos + 4, true), nidx = dv.getUint32(pos + 8, true); pos += 12;
+    const table = [];
+    for (let s = 0; s < subs; s++) { table.push([dv.getUint32(pos, true), dv.getUint32(pos + 4, true), dv.getUint32(pos + 8, true)]); pos += 12; }
+    const P = new Float32Array(buf, pos, n * 3); pos += n * 12;
+    const N = new Float32Array(buf, pos, n * 3); pos += n * 12;
+    const I = new Uint32Array(buf, pos, nidx); pos += nidx * 4;
+    // Unity is left-handed: mirror z and reverse the winding so faces stay outward.
+    const P2 = new Float32Array(n * 3), N2 = new Float32Array(n * 3), I2 = new Uint32Array(nidx);
+    for (let i = 0; i < n; i++) { P2[i*3] = P[i*3]; P2[i*3+1] = P[i*3+1]; P2[i*3+2] = -P[i*3+2]; N2[i*3] = N[i*3]; N2[i*3+1] = N[i*3+1]; N2[i*3+2] = -N[i*3+2]; }
+    for (let i = 0; i < nidx; i += 3) { I2[i] = I[i]; I2[i+1] = I[i+2]; I2[i+2] = I[i+1]; }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(P2, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(N2, 3));
+    g.setIndex(new THREE.BufferAttribute(I2, 1));
+    for (const [m, s, c] of table) g.addGroup(s, c, m);
+    out.push(g);
+  }
+  return { pivot: [pivot[0], pivot[1], -pivot[2]], body: out[0], cone: out[1] };
+}
+
+async function load(name) {
+  const buf = await (await fetch(name)).arrayBuffer();
+  return parseScene(buf);
+}
+
+function machine(scn, leanDeg) {
+  const root = new THREE.Group();
+  const body = new THREE.Mesh(scn.body, materials); body.castShadow = true; body.receiveShadow = true; root.add(body);
+  const cone = new THREE.Mesh(scn.cone, materials); cone.castShadow = true;
+  const pivot = new THREE.Group(); pivot.position.set(...scn.pivot);
+  const a = THREE.MathUtils.degToRad(leanDeg);
+  pivot.rotation.z = a;
+  pivot.position.y -= 0.1034 * Math.abs(Math.sin(a));
+  pivot.add(cone); root.add(pivot);
+  return root;
+}
+
+const params = new URLSearchParams(location.search);
+if (params.get('px')) document.getElementById('prompt').style.left = params.get('px') + 'px';
+if (params.get('py')) document.getElementById('prompt').style.top = params.get('py') + 'px';
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(1300, 372, false);
+renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(parseFloat(params.get('fov') || '26'), 1300 / 372, 0.1, 100);
+
+const hemi = new THREE.HemisphereLight(0xbfd4e6, 0x2a2e36, 0.55); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff2e0, 2.4); sun.position.set(-4, 7, 5); sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096); sun.shadow.camera.left = -4; sun.shadow.camera.right = 4; sun.shadow.camera.top = 4; sun.shadow.camera.bottom = -4; sun.shadow.bias = -0.0005; sun.shadow.radius = 4;
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0x5bd3f0, 1.6); rim.position.set(5, 3, -6); scene.add(rim);
+const fill = new THREE.DirectionalLight(0x9fb4c8, 0.5); fill.position.set(4, 2, 6); scene.add(fill);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.5 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+const [sp, mg] = await Promise.all([load('splitter.scn'), load('merger.scn')]);
+const splitter = machine(sp, parseFloat(params.get('lean') || '20'));
+const merger = machine(mg, -parseFloat(params.get('lean') || '20'));
+
+// Lay the two machines out along a belt line running from back-left to front-right.
+const yaw = THREE.MathUtils.degToRad(parseFloat(params.get('yaw') || '-28'));
+splitter.rotation.y = yaw; splitter.position.set(parseFloat(params.get('sx') || '0.35'), 0, parseFloat(params.get('sz') || '0.2'));
+merger.rotation.y = yaw; merger.position.set(parseFloat(params.get('mx') || '-1.9'), 0, parseFloat(params.get('mz') || '-2.1'));
+scene.add(splitter, merger);
+
+const box = new THREE.Box3().setFromObject(splitter);
+console.log('splitter bounds', JSON.stringify(box.min), JSON.stringify(box.max));
+
+camera.position.set(parseFloat(params.get('cx') || '3.6'), parseFloat(params.get('cy') || '2.3'), parseFloat(params.get('cz') || '4.4'));
+camera.lookAt(parseFloat(params.get('tx') || '-0.2'), parseFloat(params.get('ty') || '0.55'), parseFloat(params.get('tz') || '-0.2'));
+
+renderer.render(scene, camera);
+window.__done = true;
+</script>
+</body>
+</html>
