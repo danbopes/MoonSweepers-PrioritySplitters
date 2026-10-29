@@ -1,5 +1,12 @@
 bin/
 obj/
-tools/
+tools/.venv/
+tools/.tmp/
+tools/backup/
+tools/decomp/
+tools/bepinex-791/
+tools/*.zip
+tools/*.png
 save-backups/
 *.user
+release/

@@ -5,9 +5,10 @@
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>PrioritySplitters</AssemblyName>
     <RootNamespace>PrioritySplitters</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>disable</ImplicitUsings>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
@@ -24,6 +25,16 @@
     <Reference Include="$(GamePath)/BepInEx/interop/Assembly-CSharp.dll" Private="false" />
     <Reference Include="$(GamePath)/BepInEx/interop/Il2Cppmscorlib.dll" Private="false" />
     <Reference Include="$(GamePath)/BepInEx/interop/UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="$(GamePath)/BepInEx/interop/Unity.InputSystem.dll" Private="false" />
+    <Reference Include="$(GamePath)/BepInEx/interop/UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="$(GamePath)/BepInEx/interop/UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(GamePath)/BepInEx/interop/Unity.TextMeshPro.dll" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The splitter and merger body meshes split into a cone-less body and the letter cone; built by tools/extract_cone.py. -->
+    <EmbeddedResource Include="Resources/splitter-cone.bin" LogicalName="splitter-cone.bin" />
+    <EmbeddedResource Include="Resources/merger-cone.bin" LogicalName="merger-cone.bin" />
   </ItemGroup>
 
   <Target Name="InstallPlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' Or '$(InstallPlugin)' == 'true'">

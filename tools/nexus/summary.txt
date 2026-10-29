@@ -1,0 +1,1 @@
+Gives every splitter a priority output and every merger a priority input. Press P at a machine to choose left first, right first or vanilla round-robin; the S or M cone leans toward the chosen lane. Saved per save slot. Vanilla until you toggle.

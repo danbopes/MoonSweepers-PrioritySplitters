@@ -1,0 +1,2 @@
+1.0.0
+- Initial release: priority output per splitter, priority input per merger, P to cycle left first / right first / round-robin, leaning S and M cones, key prompt, per-slot persistence.
