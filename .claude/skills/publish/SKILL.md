@@ -71,6 +71,33 @@ Reply shape that worked (adjust the cause):
 > Thanks for the log, that pinpointed it. 1.0.0 switched itself off whenever ... Fixed in 1.0.1, which is
 > up now: ... Replace the DLL and it should stay enabled.
 
+## 4b. Or drive the user's own Chrome (Claude in Chrome)
+
+When the Playwright MCP refuses to start ("Browser is already in use for ~/.cache/ms-playwright-mcp/mcp-chrome-<hash>"),
+this session hashes to the very profile the headed Chrome is holding. Use the Claude in Chrome extension instead; it
+published 1.0.2. The user connects it with `/chrome`; stop the headed Chrome (step 5), it is not needed, and the
+user's Chrome already holds the Nexus login.
+
+1. `tabs_context_mcp` (createIfEmpty), then `navigate` the tab to the Files editor URL.
+2. `javascript_tool`: stub `HTMLInputElement.prototype.click` for `type === 'file'` inputs (record the input in
+   `window.__lastFileInput` instead of opening the OS picker), then click the old row's Update button (`find` gives
+   its ref). The second `input[type=file]` on the page (empty `accept`, under "Version management") is the one with
+   the "update existing file" relation preset.
+3. `file_upload` with that input's ref. It only takes files the session may read: copy the zip into the session
+   scratchpad first (`/tmp/claude-1000/<workspace>/<session>/scratchpad/`); the project folder is refused unless the
+   user adds it with `/add-dir`.
+4. `javascript_tool` fills the form: set `#display-name` and `#file-version` through the native value setter plus an
+   `input` event (React-controlled inputs), `.click()` the two `[role=checkbox]` spans, click `Add changelog`, fill the
+   textarea the same way, and read the values back. The extension masks anything shaped like a JWT, which includes
+   `1.0.1`, so replace the dots before returning values.
+5. Click `Save file` from JavaScript and poll `Added files` for the new row (about ten seconds). To see the API
+   calls, call `read_network_requests` once *before* the save (tracking starts at its first call), then again with
+   `urlPattern: flamework` after it.
+6. `navigate` to the public files tab and read it with `get_page_text`, then `tabs_close_mcp`.
+
+`computer` screenshots time out while the tab is in the background ("Page.captureScreenshot timed out"); the DOM
+keeps answering, so verify through JavaScript and skip the pictures.
+
 ## 5. Stop the browser
 
 ```
