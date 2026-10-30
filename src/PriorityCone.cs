@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using Il2CppInterop.Runtime;
@@ -16,17 +17,19 @@ namespace PrioritySplitters;
 // exactly as vanilla.
 internal static class PriorityCone
 {
-    private const string ConeName = "Priority cone";
+    private const string ConePrefix = "Priority cone";
 
-    // One stock body mesh and its split: the splitter's and the merger's.
+    // One stock body mesh and its split. Each kind has two: the model standing on its legs, and the one the game
+    // shows instead while the machine hangs on a raised belt (MoonRaisedMachine.SetModel), the same body without
+    // the legs, feet and braces. Both carry the cone at the same spot.
     private sealed class Model
     {
         private readonly string resource;
         private readonly string meshName;
         private readonly string letter;
+        private readonly string coneName;
         private bool loaded;
         private bool unavailable;
-        private bool hierarchyLogged;
         private int sourceVertexCount;
         private Vector3 pivot;
         private float baseRadius;
@@ -39,25 +42,39 @@ internal static class PriorityCone
             this.resource = resource;
             this.meshName = meshName;
             this.letter = letter;
+            coneName = $"{ConePrefix} ({meshName})";
         }
 
-        public void Apply(Machine machine, Transform view)
+        public string MeshName => meshName;
+        public string Letter => letter;
+
+        // True when the filter shows this model: the stock mesh, or the cone-less copy once swapped in.
+        public bool Shows(Mesh mesh) =>
+            mesh != null && (mesh.name == meshName || (bodyMesh != null && mesh.name == bodyMesh.name));
+
+        public void Apply(Machine machine, Transform body)
         {
             if (unavailable || !Load())
                 return;
-            var body = FindBody(view);
-            if (body == null)
-            {
-                LogHierarchy(view);
+            var filter = body.GetComponent<MeshFilter>();
+            if (filter == null)
                 return;
-            }
-            var cone = body.Find(ConeName);
+            var cone = body.Find(coneName);
             if (cone == null)
             {
-                cone = Split(body);
+                cone = Split(body, filter);
                 if (cone == null)
                     return;
             }
+            else if (filter.sharedMesh != null && filter.sharedMesh.name == meshName)
+            {
+                // The game put its own mesh back, baked cone included: SetModel runs again when the belts around a
+                // raised machine change. The cone child is still there, so only the body needs swapping again.
+                if (!StockBody(filter))
+                    return;
+                filter.sharedMesh = bodyMesh;
+            }
+            DropOtherCones(body);
 
             var degrees = Lean(machine, body, out var sign);
             // Unity rotates a positive angle about +z from +y toward -x, so a lean toward +x is a negative angle.
@@ -67,33 +84,30 @@ internal static class PriorityCone
             cone.localPosition = pivot - Vector3.up * (baseRadius * Mathf.Sin(degrees * Mathf.Deg2Rad));
         }
 
-        // The renderer holding the stock body mesh, or the cone-less copy once swapped. The splitter prefab keeps
-        // it on a child named after the mesh, the merger prefab on the "Model" object itself, so it is found by
-        // mesh name rather than by path.
-        private Transform FindBody(Transform view)
+        // A machine that changes between standing and raised shows the other model's mesh in the same filter;
+        // the cone cut for the previous model goes with it.
+        private void DropOtherCones(Transform body)
         {
-            var filters = view.GetComponentsInChildren<MeshFilter>(true);
-            for (var i = 0; filters is not null && i < filters.Length; i++)
+            for (var i = body.childCount - 1; i >= 0; i--)
             {
-                var mesh = filters[i].sharedMesh;
-                if (mesh != null && (mesh.name == meshName || (bodyMesh != null && mesh.name == bodyMesh.name)))
-                    return filters[i].transform;
+                var child = body.GetChild(i);
+                var name = child.name;
+                if (name != coneName && name.StartsWith(ConePrefix, StringComparison.Ordinal))
+                    UnityEngine.Object.Destroy(child.gameObject);
             }
-            return null;
         }
 
         // Swaps the body for the cone-less copy and adds the cone as a child, sharing the body's materials and
-        // render settings. Returns null for bodies that are not the stock model, such as raised machines.
-        private Transform Split(Transform body)
+        // render settings. Returns null for bodies that are not the stock model.
+        private Transform Split(Transform body, MeshFilter filter)
         {
-            var filter = body.GetComponent<MeshFilter>();
             var renderer = body.GetComponent<MeshRenderer>();
-            if (filter == null || renderer == null || !StockBody(filter))
+            if (renderer == null || !StockBody(filter))
                 return null;
 
             filter.sharedMesh = bodyMesh;
 
-            var cone = new GameObject(ConeName);
+            var cone = new GameObject(coneName);
             cone.layer = body.gameObject.layer;
             var transform = cone.transform;
             transform.SetParent(body, false);
@@ -124,30 +138,11 @@ internal static class PriorityCone
                 return false;
             if (current.vertexCount != sourceVertexCount)
             {
-                Plugin.Logger.LogWarning($"{meshName} has {current.vertexCount} vertices but the bundled split expects {sourceVertexCount}; the {letter} will not show priorities until the mod is updated for this game version");
+                Plugin.Logger.LogWarning($"{meshName} has {current.vertexCount} vertices but the bundled split expects {sourceVertexCount}; the {letter} will not show priorities on this model until the mod is updated for this game version");
                 unavailable = true;
                 return false;
             }
             return true;
-        }
-
-        // Raised machines use their own body mesh (splitter_raised, merger_raised) with no split, so they are
-        // skipped quietly; any other layout is logged once so a game update shows up in the log.
-        private void LogHierarchy(Transform view)
-        {
-            if (hierarchyLogged)
-                return;
-            var meshes = "";
-            var filters = view.GetComponentsInChildren<MeshFilter>(true);
-            for (var i = 0; filters is not null && i < filters.Length; i++)
-            {
-                var mesh = filters[i].sharedMesh;
-                if (mesh != null && mesh.name.EndsWith("_raised"))
-                    return;
-                meshes += $"{filters[i].name}: {(mesh != null ? mesh.name : "none")}; ";
-            }
-            hierarchyLogged = true;
-            Plugin.Logger.LogWarning($"No mesh named '{meshName}' under the {letter} machine view '{view.name}'; meshes found: {meshes}");
         }
 
         private bool Load()
@@ -174,21 +169,30 @@ internal static class PriorityCone
                 baseRadius = reader.ReadSingle();
 
                 bodyMesh = ReadMesh(reader, meshName + " (no cone)", tangents, out _);
-                coneMesh = ReadMesh(reader, letter + " cone", tangents, out coneMaterials);
-                Plugin.Logger.LogInfo($"{letter} cone split loaded: body {bodyMesh.vertexCount} vertices, cone {coneMesh.vertexCount} vertices, pivot {pivot}");
+                coneMesh = ReadMesh(reader, $"{letter} cone ({meshName})", tangents, out coneMaterials);
+                Plugin.Logger.LogInfo($"{letter} cone split loaded for {meshName}: body {bodyMesh.vertexCount} vertices, cone {coneMesh.vertexCount} vertices, pivot {pivot}");
                 return true;
             }
             catch (Exception e)
             {
                 unavailable = true;
-                Plugin.Logger.LogWarning($"Could not load the {letter} cone split, the {letter} will not show priorities: {e}");
+                Plugin.Logger.LogWarning($"Could not load the {letter} cone split for {meshName}, the {letter} will not show priorities on that model: {e}");
                 return false;
             }
         }
     }
 
-    private static readonly Model splitter = new("splitter-cone.bin", "SM_splitter.001", "S");
-    private static readonly Model merger = new("merger-cone.bin", "SM_merger.001", "M");
+    private static readonly Model[] splitterModels =
+    {
+        new("splitter-cone.bin", "SM_splitter.001", "S"),
+        new("splitter-raised-cone.bin", "splitter_raised", "S"),
+    };
+    private static readonly Model[] mergerModels =
+    {
+        new("merger-cone.bin", "SM_merger.001", "M"),
+        new("merger-raised-cone.bin", "merger_raised", "M"),
+    };
+    private static readonly HashSet<string> layoutsLogged = new();
     private static MoonDepotConstruction construction;
 
     public static void Reset() => construction = null;
@@ -212,8 +216,46 @@ internal static class PriorityCone
         {
             var view = construction.ViewOf(machine.Id);
             if (view != null)
-                (machine is Merger ? merger : splitter).Apply(machine, view.transform);
+                Apply(machine is Merger ? mergerModels : splitterModels, machine, view.transform);
         }
+    }
+
+    // The body is found by the mesh it shows, never by path: the splitter prefab keeps it on a child named after
+    // the mesh, the merger prefab on the "Model" object itself, and a raised machine shows the raised mesh in
+    // whichever filter the standing one used.
+    private static void Apply(Model[] models, Machine machine, Transform view)
+    {
+        var filters = view.GetComponentsInChildren<MeshFilter>(true);
+        for (var i = 0; filters is not null && i < filters.Length; i++)
+        {
+            var mesh = filters[i].sharedMesh;
+            foreach (var model in models)
+            {
+                if (model.Shows(mesh))
+                {
+                    model.Apply(machine, filters[i].transform);
+                    return;
+                }
+            }
+        }
+        LogLayout(models, view, filters);
+    }
+
+    // Any other layout is logged once per kind, so a game update that renames the meshes shows up in the log.
+    private static void LogLayout(Model[] models, Transform view, MeshFilter[] filters)
+    {
+        if (!layoutsLogged.Add(models[0].Letter))
+            return;
+        var meshes = "";
+        for (var i = 0; filters is not null && i < filters.Length; i++)
+        {
+            var mesh = filters[i].sharedMesh;
+            meshes += $"{filters[i].name}: {(mesh != null ? mesh.name : "none")}; ";
+        }
+        var expected = new List<string>();
+        foreach (var model in models)
+            expected.Add($"'{model.MeshName}'");
+        Plugin.Logger.LogWarning($"No mesh named {string.Join(" or ", expected)} under the {models[0].Letter} machine view '{view.name}'; meshes found: {meshes}");
     }
 
     // Degrees to lean and which way: sign +1 leans toward the body's +x side. 0 when the machine is

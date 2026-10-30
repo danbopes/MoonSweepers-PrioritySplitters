@@ -7,6 +7,10 @@ UnityPy virtualenv:
 
     python -I tools/extract_cone.py "<game>/MoonSweepers_Data/resources.assets" splitter src/Resources/splitter-cone.bin
     python -I tools/extract_cone.py "<game>/MoonSweepers_Data/resources.assets" merger src/Resources/merger-cone.bin
+    python -I tools/extract_cone.py "<game>/MoonSweepers_Data/resources.assets" splitter_raised src/Resources/splitter-raised-cone.bin
+    python -I tools/extract_cone.py "<game>/MoonSweepers_Data/resources.assets" merger_raised src/Resources/merger-raised-cone.bin
+
+The raised models are what the game shows on a machine hung on a raised belt: the same body without its legs.
 """
 import struct, sys, zlib
 import UnityPy
@@ -16,6 +20,9 @@ from UnityPy.helpers.MeshHelper import MeshHandler
 MODELS = {
     "splitter": ("SM_splitter.001", (0.5, 0.72)),
     "merger": ("SM_merger.001", (-0.72, -0.5)),
+    # Hung on a raised belt the machine shows its model without legs, feet and braces; the cone sits as before.
+    "splitter_raised": ("splitter_raised", (0.5, 0.72)),
+    "merger_raised": ("merger_raised", (-0.72, -0.5)),
 }
 # Submeshes that make up the cone: graphite body, cyan letters, brushed tip.
 CONE_SUBMESHES = (2, 4, 5)
@@ -63,7 +70,8 @@ def main(assets, model, out):
     for i, sm in enumerate(mesh.m_SubMeshes):
         start = sm.firstByte // isz
         count = sm.indexCount
-        if lod is not None and lod.m_SubMeshes and lod.m_SubMeshes[i].m_Levels:
+        # A single-level table (the raised models) leaves its level empty: the whole submesh is the one level.
+        if lod is not None and lod.m_SubMeshes and lod.m_SubMeshes[i].m_Levels and lod.m_SubMeshes[i].m_Levels[0].m_IndexCount:
             level = lod.m_SubMeshes[i].m_Levels[0]
             start += level.m_IndexStart
             count = level.m_IndexCount

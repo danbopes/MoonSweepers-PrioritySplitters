@@ -37,7 +37,6 @@ Tested on Moon Sweepers 1.0.4, on Windows and under Proton on Linux.
 ## Known limitations
 
 - A priority can only be chosen once both lanes of a machine have a belt attached.
-- Machines that use the game's raised body mesh get the priority but do not show the cone lean yet.
 - Co-op is untested. Routing runs in the simulation, so at least the host should have the mod installed.
 
 ## Building

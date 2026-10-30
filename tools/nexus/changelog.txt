@@ -1,3 +1,7 @@
+1.0.2
+- The S and M cones now lean on machines hung on a raised belt too (the game shows them a leg-less body mesh, which the mod did not split before).
+- Fix: after returning to the main menu and loading a save again, the mod could stop working (no prompt, upright cones, vanilla routing) until the game was restarted. The world is now looked up again after the scene change, and an error while the world changes no longer disables the mod for the rest of the session.
+
 1.0.1
 - Fix: the mod disabled itself ("the rider table has no entry array yet") when the world had no capsule on any belt at load, for example in a new game. It now waits for the first capsule.
 

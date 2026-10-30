@@ -113,6 +113,13 @@ and `tools/publish/nexus/*.js` upload the file, verify the page and answer bug r
   leave a stale "no belt" answer for a belt built there later. `HandOff` only notes the world instance and
   looks machines up. An early build refreshed inside `HandOff`, which is why a freshly placed splitter showed
   `#126 in0 []` and could not take a priority.
+  **Scene changes:** `MoonWorld` is a MonoBehaviour, destroyed with the scene when the player returns to the
+  menu, and a new one is made when a save loads again. `Poll` drops a world that Unity reports destroyed
+  (`world == null`) or whose interop wrapper throws `ObjectCollectedException` (the interop pools wrappers), via
+  `Reset` (world, machines, roles, counts, lane monitor, settings), and looks the world up itself with
+  `FindObjectsOfType<MoonWorld>` twice a second once the loading screen is gone, so a factory with nothing
+  entering a machine still gets its prompt and cones. 1.0.1 and earlier kept the dead world: after a menu round
+  trip the mod went quiet (no prompt, upright cones, vanilla routing) until the game was restarted.
 - `Settings.cs`: per-slot JSON `BepInEx/config/PrioritySplitters/slot-<N>.json` (`{"depotId": port | -1}`),
   slot from `MoonSaveSlots.Active`. Splitters and mergers share the file (depot ids are unique). A machine
   with no entry alternates exactly as in vanilla; the user wants new machines never to default to a side (the
@@ -121,8 +128,11 @@ and `tools/publish/nexus/*.js` upload the file, verify the page and answer bug r
   nearest tracked machine to the camera ray; camera from `MoonWalker.viewCamera`), HUD toast
   (`MoonHudNotice.Show`, "Splitter: left first" / "Merger: right first"), the key prompt (the game's
   `MoonActionPromptCard`: `Create(owner, name, 95)`, `Show(key, title)`, `Hide()`, `OthersShowing`; text
-  "Change priority (left first)"), and a half-second `PriorityCone.Sync`.
-- `PriorityCone.cs`: the cone lean, below. One `Model` per body mesh (splitter, merger).
+  "Change priority (left first)"), and a half-second `PriorityCone.Sync`. Leaving the game scene calls
+  `MachineLayout.Reset` and `PriorityCone.Reset`. An exception in `Update` goes to `Recover`: the layout is
+  dropped and rebuilt next frame, with a warning at most every 5 s; only 300 failing frames in a row call
+  `HandOffPatch.Fault`. (Before 1.0.2 any exception there disabled the mod for the session.)
+- `PriorityCone.cs`: the cone lean, below. Two `Model`s per kind: the standing body mesh and the raised one.
 - `Diagnostics.cs`: `[routing 5s]`, `[lanes]`, `[refused]`, `[topology]` logging behind `DebugRouting`.
 
 ## The cones
@@ -154,7 +164,13 @@ and `tools/publish/nexus/*.js` upload the file, verify the page and answer bug r
   (then Unity's own decode of the mesh can be read back in game). The backup lives in `tools/backup/` (298 MB,
   never commit); restore it afterwards with `cp -p`. Never use UnityPy's whole-file save on this file: it
   truncated it to 2.6 MB once.
-- Raised machines (`splitter_raised`, `merger_raised`) are skipped: no lean, routing still applies.
+- Raised machines: a machine hung on a raised belt shows `MoonDepotBuildDefinition.raisedModel` (`splitter_raised`,
+  `merger_raised`: the body without legs, feet and braces, one LOD level whose table entry has index count 0, so
+  the extractor takes the whole submesh) in the same MeshFilter, set by `MoonRaisedMachine.SetModel`. Those are
+  split too (`src/Resources/*-raised-cone.bin`, same pivot and radius, same cone triangle counts). `PriorityCone`
+  keeps two `Model`s per kind and picks the one whose mesh the view shows, names the cone child after the mesh,
+  drops the other model's cone if the game swaps meshes, and re-swaps the body when `SetModel` puts the stock
+  mesh (baked cone included) back.
 
 ## Interop and Wine gotchas
 

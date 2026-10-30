@@ -5,7 +5,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>PrioritySplitters</AssemblyName>
     <RootNamespace>PrioritySplitters</RootNamespace>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -35,6 +35,9 @@
     <!-- The splitter and merger body meshes split into a cone-less body and the letter cone; built by tools/extract_cone.py. -->
     <EmbeddedResource Include="Resources/splitter-cone.bin" LogicalName="splitter-cone.bin" />
     <EmbeddedResource Include="Resources/merger-cone.bin" LogicalName="merger-cone.bin" />
+    <!-- The same split for the leg-less models the game shows on machines hung on a raised belt. -->
+    <EmbeddedResource Include="Resources/splitter-raised-cone.bin" LogicalName="splitter-raised-cone.bin" />
+    <EmbeddedResource Include="Resources/merger-raised-cone.bin" LogicalName="merger-raised-cone.bin" />
   </ItemGroup>
 
   <Target Name="InstallPlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' Or '$(InstallPlugin)' == 'true'">

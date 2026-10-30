@@ -310,6 +310,7 @@ internal static class MachineLayout
     private static string lastSummary;
 
     private static MoonWorld liveWorld;
+    private static float nextWorldSearch;
 
     public static MoonWorld World => cachedWorld;
     public static IEnumerable<Machine> All => machines.Values;
@@ -322,26 +323,73 @@ internal static class MachineLayout
             liveWorld = world;
     }
 
+    // Forgets the world and everything laid out from it. Leaving for the menu destroys the world with its scene,
+    // and loading a save again makes a new one; nothing read from the old one is worth keeping.
+    public static void Reset()
+    {
+        liveWorld = null;
+        cachedWorld = null;
+        cachedDepotCount = -1;
+        cachedConveyorCount = -1;
+        nextRefresh = 0f;
+        nextWorldSearch = 0f;
+        lastSummary = null;
+        machines.Clear();
+        roles.Clear();
+        LaneMonitor.Reset();
+        Settings.Forget();
+    }
+
     // Called every frame from the behaviour. The layout is read from the game outside StepConveyors on purpose:
     // while the world is stepping, BeltStartingAt and friends cache every position they are asked about, a
     // missing belt included, so asking about an unconnected port then would leave a stale answer behind for
     // a belt built there later.
     public static void Poll()
     {
-        var world = liveWorld;
-        if (world is null)
-            return;
         try
         {
+            var world = liveWorld;
+            // `is null` is the managed reference; `== null` asks Unity whether the object still exists, which a
+            // world destroyed by a scene change no longer does.
+            if (world is not null && world == null)
+            {
+                Reset();
+                world = null;
+            }
+            if (world is null)
+            {
+                world = liveWorld = FindWorld();
+                if (world is null)
+                    return;
+            }
             if (world.stepping)
                 return;
+            Refresh(world);
         }
         catch (ObjectCollectedException)
         {
-            liveWorld = null;
-            return;
+            // The interop pools wrappers, and a wrapper whose object the runtime has collected throws on any use.
+            Reset();
         }
-        Refresh(world);
+    }
+
+    // HandOff names the world the moment a capsule enters a machine. Until then, and again after a scene change,
+    // the scene is searched for it a couple of times a second once the loading screen is gone, so a quiet
+    // factory still gets its prompt and cones.
+    private static MoonWorld FindWorld()
+    {
+        var now = Time.realtimeSinceStartup;
+        if (now < nextWorldSearch || MoonSession.Loading || MoonLoadingScreen.Active)
+            return null;
+        nextWorldSearch = now + 0.5f;
+        var found = UnityEngine.Object.FindObjectsOfType(Il2CppType.Of<MoonWorld>(), false);
+        for (var i = 0; found is not null && i < found.Length; i++)
+        {
+            var world = found[i].TryCast<MoonWorld>();
+            if (world != null)
+                return world;
+        }
+        return null;
     }
 
     public static IEnumerable<Splitter> Splitters

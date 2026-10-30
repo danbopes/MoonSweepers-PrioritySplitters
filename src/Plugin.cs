@@ -14,7 +14,7 @@ public sealed class Plugin : BasePlugin
 {
     public const string Guid = "danbopes.moonsweepers.prioritysplitters";
     public const string Name = "Priority Splitters";
-    public const string Version = "1.0.1";
+    public const string Version = "1.0.2";
 
     internal static ManualLogSource Logger { get; private set; }
     internal static ConfigEntry<bool> Enabled { get; private set; }

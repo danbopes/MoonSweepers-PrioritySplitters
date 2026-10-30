@@ -21,6 +21,8 @@ public sealed class PriorityBehaviour : MonoBehaviour
     private Camera view;
     private bool wasInGame;
     private float nextSync;
+    private int failures;
+    private float nextFailureLog;
 
     public PriorityBehaviour(IntPtr pointer) : base(pointer) { }
 
@@ -35,7 +37,7 @@ public sealed class PriorityBehaviour : MonoBehaviour
             {
                 if (wasInGame)
                 {
-                    Settings.Forget();
+                    MachineLayout.Reset();
                     PriorityCone.Reset();
                     HidePrompt();
                     card = null;
@@ -65,10 +67,33 @@ public sealed class PriorityBehaviour : MonoBehaviour
                 nextSync = now + 0.5f;
                 PriorityCone.Sync();
             }
+            failures = 0;
         }
         catch (Exception e)
         {
+            Recover(e);
+        }
+    }
+
+    // An error while the world changes under the mod, such as a scene swap part-way through a frame, must not
+    // take the mod down for the rest of the session: the layout is dropped and built again next frame. Only an
+    // error that keeps coming back frame after frame disables the mod, the way a routing error does.
+    [HideFromIl2Cpp]
+    private void Recover(Exception e)
+    {
+        failures++;
+        MachineLayout.Reset();
+        PriorityCone.Reset();
+        if (failures >= 300)
+        {
             HandOffPatch.Fault(e);
+            return;
+        }
+        var now = Time.unscaledTime;
+        if (now >= nextFailureLog)
+        {
+            nextFailureLog = now + 5f;
+            Plugin.Logger.LogWarning($"Error {failures} in the priority behaviour, dropping the layout to rebuild it: {e}");
         }
     }
 
