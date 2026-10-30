@@ -81,6 +81,12 @@ case $cmd in
   stop)
     profile=$(profile_dir 2>/dev/null || true)
     pkill -f -- "--remote-debugging-port=$port --remote-allow-origins" || true
+    # Renderer children outlive the browser process for a moment and the lock symlink stays behind.
+    if [ -n "$profile" ]; then
+      for _ in $(seq 1 20); do pgrep -f -- "--user-data-dir=$profile" >/dev/null || break; sleep 0.5; done
+      pkill -f -- "--user-data-dir=$profile" 2>/dev/null || true
+      rm -f "$profile/SingletonLock" "$profile/SingletonSocket" "$profile/SingletonCookie"
+    fi
     echo "stopped${profile:+ ($profile is free again)}"
     ;;
   status)
