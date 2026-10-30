@@ -14,7 +14,7 @@ Vanilla splitters alternate left and right no matter what is waiting on either s
 ## Install
 
 1. Install BepInEx 6.0.0-be.791 (Unity.IL2CPP win-x64) and the [Moon Sweepers BepInEx Patcher](https://www.nexusmods.com/moonsweepers/mods/9). Stock BepInEx cannot load plugins on this game without the patcher.
-2. Download the release zip and extract it into the game folder, so the DLL ends up at `BepInEx/plugins/PrioritySplitters/PrioritySplitters.dll`.
+2. Download the release zip from [Nexus Mods](https://www.nexusmods.com/moonsweepers/mods/80) and extract it into the game folder, so the DLL ends up at `BepInEx/plugins/PrioritySplitters/PrioritySplitters.dll`.
 3. Start the game, load a save and look at a splitter or merger from within 6 m. The game's key prompt shows the toggle key and the current priority.
 
 Tested on Moon Sweepers 1.0.4, on Windows and under Proton on Linux.
