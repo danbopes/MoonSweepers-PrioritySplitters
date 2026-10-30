@@ -16,6 +16,12 @@ on `Model` itself, so the body is now found by mesh name) and that the lean dire
 (a wrong direction is a sign flip in `PriorityCone.Lean` for mergers); and the priority belt visibly
 winning. Then Nexus packaging and a GitHub repo (danbopes). No equivalent mod exists (checked).
 
+## Releasing
+
+`/publish` (`.claude/skills/publish/SKILL.md`) is the release runbook: `tools/publish/package.sh` builds the
+Nexus zip, `tools/publish/headed-chrome.sh` opens a visible Chrome with the Nexus login for the Playwright MCP,
+and `tools/publish/nexus/*.js` upload the file, verify the page and answer bug reports. Nexus mod 80.
+
 ## Environment
 
 - Linux, Proton 11.0. Game: `~/.local/share/Steam/steamapps/common/Moon Sweepers`. Launch options (set):

@@ -10,3 +10,4 @@ tools/*.png
 save-backups/
 *.user
 release/
+.playwright-mcp/
