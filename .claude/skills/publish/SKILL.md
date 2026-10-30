@@ -124,4 +124,10 @@ profile would fail to start.
   hidden textarea. The status dropdown is select2 over a hidden `<select>`; set its value and
   `jQuery(sel).trigger('change')`. "Close issue" lives in the report's Manage menu (`#manage-issue-<id>` opens
   it; the link `#issue-lock-action_<id>` calls `changeIssueLocking(<id>)` and reads "Re-open issue" once closed).
+- The full description on `/edit/general` is SCEditor in WYSIWYG mode: the BBCode `textarea` under `.bbcode-editor` is
+  `display: none` and setting its value enables nothing. Edit the contenteditable body of the editor's iframe (remove
+  the `li`, or change the text), dispatch `input` and `keyup` on that body, call `textarea._sceditor.updateOriginal()`,
+  and the header Save button enables; the save is a `POST` that returns 200 and the button disables again. The
+  round trip through the editor re-normalises the BBCode, so the live text is a few characters off
+  `tools/nexus/description.bbcode` without differing in content.
 - Nexus mod id 80, game id 10774. Editor pages: `/games/moonsweepers/mods/80/edit/{general,media,files,requirements,permissions}`.
