@@ -25,7 +25,7 @@ internal static unsafe class RiderTable
     private const int ObjectHeader = 0x10;
     private const int ArrayData = 0x20;
 
-    private static bool resolved;
+    private static bool tableResolved, entryResolved;
     private static int ridersOffset;
     private static int entriesOffset, countOffset, freeCountOffset;
     private static int entrySize, hashOffset, nextOffset, valueOffset;
@@ -39,20 +39,29 @@ internal static unsafe class RiderTable
 
     public static void Scan(MoonWorld world)
     {
-        if (!resolved)
+        if (!tableResolved)
             ridersOffset = Offset(Il2CppClassPointerStore<MoonWorld>.NativeClassPtr, "riders");
         var dict = *(byte**)((byte*)world.Pointer + ridersOffset);
         if (dict == null)
             throw new InvalidOperationException("the world has no rider table");
-        if (!resolved)
-            Resolve(dict);
+        if (!tableResolved)
+            ResolveTable(dict);
 
         lanes.Clear();
         var used = *(int*)(dict + countOffset);
         var expected = used - *(int*)(dict + freeCountOffset);
         var entries = *(byte**)(dict + entriesOffset);
         if (entries == null)
+        {
+            // The dictionary only allocates its entry array on the first Add, so a world that has never had a
+            // capsule on a belt has none. Nothing to scan, and the entry layout waits for the first capsule.
+            if (expected != 0)
+                throw new InvalidOperationException($"rider table holds {expected} riders without an entry array");
             return;
+        }
+        if (!entryResolved)
+            ResolveEntry(entries);
+
         var length = (int)IL2CPP.il2cpp_array_length((IntPtr)entries);
         if (used > length)
             throw new InvalidOperationException($"rider table claims {used} entries in an array of {length}");
@@ -86,17 +95,20 @@ internal static unsafe class RiderTable
             throw new InvalidOperationException($"rider table read {live} live riders but the dictionary holds {expected}");
     }
 
-    private static void Resolve(byte* dict)
+    private static void ResolveTable(byte* dict)
     {
         var dictClass = IL2CPP.il2cpp_object_get_class((IntPtr)dict);
         entriesOffset = Offset(dictClass, "_entries");
         countOffset = Offset(dictClass, "_count");
         freeCountOffset = Offset(dictClass, "_freeCount");
+        tableResolved = true;
+    }
 
-        var entries = *(IntPtr*)(dict + entriesOffset);
-        if (entries == IntPtr.Zero)
-            throw new InvalidOperationException("the rider table has no entry array yet");
-        var arrayClass = IL2CPP.il2cpp_object_get_class(entries);
+    // The entry type is a nested generic instantiation with no handle of its own in the interop, so its layout
+    // is read off the first entry array the dictionary allocates.
+    private static void ResolveEntry(byte* entries)
+    {
+        var arrayClass = IL2CPP.il2cpp_object_get_class((IntPtr)entries);
         var entryClass = IL2CPP.il2cpp_class_get_element_class(arrayClass);
         entrySize = IL2CPP.il2cpp_array_element_size(arrayClass);
 
@@ -114,7 +126,7 @@ internal static unsafe class RiderTable
         if (hashOffset < 0 || nextOffset < 0 || valueOffset < 0 || beltOffset < 0 || distanceOffset < 0 || movingOffset < 0
             || valueOffset + movingOffset >= entrySize)
             throw new InvalidOperationException("the rider table layout is not one this build understands");
-        resolved = true;
+        entryResolved = true;
     }
 
     private static int Offset(IntPtr klass, string field)

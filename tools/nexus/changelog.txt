@@ -1,2 +1,5 @@
+1.0.1
+- Fix: the mod disabled itself ("the rider table has no entry array yet") when the world had no capsule on any belt at load, for example in a new game. It now waits for the first capsule.
+
 1.0.0
 - Initial release: priority output per splitter, priority input per merger, P to cycle left first / right first / round-robin, leaning S and M cones, key prompt, per-slot persistence.

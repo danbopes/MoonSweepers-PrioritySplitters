@@ -75,7 +75,10 @@ winning. Then Nexus packaging and a GitHub repo (danbopes). No equivalent mod ex
 - Riders: `MoonWorld.riders`, `Dictionary<int, Rider>` (struct {belt@0, distance@4, lag@8, moving@0xC,
   placedOn@0x10, placedAt@0x18}, 40 bytes). The interop wrappers for that struct corrupt the stack, so
   `RiderTable.cs` scans the dictionary's raw memory (entries 56 bytes: hash@0 next@4 value@16; array data at
-  +0x20; field offsets resolved through `IL2CPP.il2cpp_class_get_field_from_name`).
+  +0x20; field offsets resolved through `IL2CPP.il2cpp_class_get_field_from_name`). The dictionary has no
+  `_entries` array until the first capsule is added, so a world with nothing riding (a new game) scans as
+  empty and the entry layout is resolved from the first array that appears; 1.0.0 threw there and disabled
+  itself.
 
 ## Plugin layout
 

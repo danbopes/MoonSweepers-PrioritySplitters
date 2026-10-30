@@ -1,4 +1,4 @@
-Priority Splitters 1.0.0 for Moon Sweepers
+Priority Splitters 1.0.1 for Moon Sweepers
 ==========================================
 
 Gives every splitter a priority output and every merger a priority input.
