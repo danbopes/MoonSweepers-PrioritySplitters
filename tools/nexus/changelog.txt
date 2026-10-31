@@ -1,3 +1,6 @@
+1.0.3
+- Priorities can only be changed, and the key prompt only shows, while the hammer (the build tool) is in your hand, so the toggle key does nothing while you are sweeping. Pressing it at a machine without the hammer says so. HammerOnly=false in the config restores the old behaviour.
+
 1.0.2
 - The S and M cones now lean on machines hung on a raised belt too (the game shows them a leg-less body mesh, which the mod did not split before).
 - Fix: after returning to the main menu and loading a save again, the mod could stop working (no prompt, upright cones, vanilla routing) until the game was restarted. The world is now looked up again after the scene change, and an error while the world changes no longer disables the mod for the rest of the session.

@@ -128,7 +128,10 @@ and `tools/publish/nexus/*.js` upload the file, verify the page and answer bug r
   nearest tracked machine to the camera ray; camera from `MoonWalker.viewCamera`), HUD toast
   (`MoonHudNotice.Show`, "Splitter: left first" / "Merger: right first"), the key prompt (the game's
   `MoonActionPromptCard`: `Create(owner, name, 95)`, `Show(key, title)`, `Hide()`, `OthersShowing`; text
-  "Change priority (left first)"), and a half-second `PriorityCone.Sync`. Leaving the game scene calls
+  "Change priority (left first)"), and a half-second `PriorityCone.Sync`. Both the toggle and the prompt need
+  the hammer out (1.0.3, config `HammerOnly`): `MoonDepotBuilder.HoldingBuildTool` on the walker's own object,
+  which is true when the selected toolbelt slot holds a `MoonToolDefinition` flagged `buildTool` and no prototype
+  tool is equipped. Pressing the key at a machine without the hammer shows a toast saying so. Leaving the game scene calls
   `MachineLayout.Reset` and `PriorityCone.Reset`. An exception in `Update` goes to `Recover`: the layout is
   dropped and rebuilt next frame, with a warning at most every 5 s; only 300 failing frames in a row call
   `HandOffPatch.Fault`. (Before 1.0.2 any exception there disabled the mod for the session.)

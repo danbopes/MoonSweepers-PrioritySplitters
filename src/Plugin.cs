@@ -14,11 +14,12 @@ public sealed class Plugin : BasePlugin
 {
     public const string Guid = "danbopes.moonsweepers.prioritysplitters";
     public const string Name = "Priority Splitters";
-    public const string Version = "1.0.2";
+    public const string Version = "1.0.3";
 
     internal static ManualLogSource Logger { get; private set; }
     internal static ConfigEntry<bool> Enabled { get; private set; }
     internal static ConfigEntry<string> ToggleKey { get; private set; }
+    internal static ConfigEntry<bool> HammerOnly { get; private set; }
     internal static ConfigEntry<float> GraceSeconds { get; private set; }
     internal static ConfigEntry<float> ReleaseSeconds { get; private set; }
     internal static ConfigEntry<float> ReachMeters { get; private set; }
@@ -34,6 +35,8 @@ public sealed class Plugin : BasePlugin
             "Set to false to restore vanilla round-robin splitters and mergers without uninstalling. Machines you have not toggled always alternate as in vanilla.");
         ToggleKey = Config.Bind("General", "ToggleKey", "p",
             "Key that cycles the splitter or merger you are looking at between left first, right first and round-robin. Saved per save slot.");
+        HammerOnly = Config.Bind("General", "HammerOnly", true,
+            "Change a priority, and show its key prompt, only while the hammer (the build tool) is in your hand. Set to false to toggle with any tool out.");
         GraceSeconds = Config.Bind("Tuning", "GraceSeconds", 0.2f,
             "How long a capsule has to stand still before its lane counts as backed up. The frame or two a capsule pauses at a busy entrance should stay under this.");
         ReleaseSeconds = Config.Bind("Tuning", "ReleaseSeconds", 1.0f,

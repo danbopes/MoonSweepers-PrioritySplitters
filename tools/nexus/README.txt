@@ -1,11 +1,11 @@
-Priority Splitters 1.0.2 for Moon Sweepers
+Priority Splitters 1.0.3 for Moon Sweepers
 ==========================================
 
 Gives every splitter a priority output and every merger a priority input.
-Look at a splitter or merger from within 6 m and press P to cycle it through
-left first, right first and round-robin (vanilla). The S or M cone on the
-machine leans toward the priority lane. Choices are saved per save slot in
-BepInEx\config\PrioritySplitters\slot-N.json.
+With the hammer out, look at a splitter or merger from within 6 m and press P
+to cycle it through left first, right first and round-robin (vanilla). The S
+or M cone on the machine leans toward the priority lane. Choices are saved per
+save slot in BepInEx\config\PrioritySplitters\slot-N.json.
 
 Requirements
   - BepInEx 6.0.0-be.791 (Unity.IL2CPP win-x64)

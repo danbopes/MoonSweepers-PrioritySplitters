@@ -18,6 +18,7 @@ public sealed class PriorityBehaviour : MonoBehaviour
     private MoonActionPromptCard card;
     private MoonPlayerHud hud;
     private MoonWalker walker;
+    private MoonDepotBuilder builder;
     private Camera view;
     private bool wasInGame;
     private float nextSync;
@@ -44,6 +45,7 @@ public sealed class PriorityBehaviour : MonoBehaviour
                     notice = null;
                     hud = null;
                     walker = null;
+                    builder = null;
                     view = null;
                 }
                 wasInGame = false;
@@ -126,6 +128,15 @@ public sealed class PriorityBehaviour : MonoBehaviour
     private void Toggle(MoonWorld world)
     {
         var machine = Aimed(out var miss);
+        if (!HammerAllows(Walker()))
+        {
+            if (machine is not null)
+            {
+                Plugin.Logger.LogInfo($"Toggle pressed at #{machine.Id} without the hammer out");
+                Show("Hold the hammer to change priority");
+            }
+            return;
+        }
         if (machine is null)
         {
             Plugin.Logger.LogInfo($"Toggle pressed with no splitter or merger in view: {miss}");
@@ -210,6 +221,7 @@ public sealed class PriorityBehaviour : MonoBehaviour
         if (walker != null && walker.isActiveAndEnabled)
             return walker;
         walker = null;
+        builder = null;
         var walkers = UnityEngine.Object.FindObjectsOfType(Il2CppType.Of<MoonWalker>(), false);
         for (var i = 0; walkers is not null && i < walkers.Length; i++)
         {
@@ -221,6 +233,20 @@ public sealed class PriorityBehaviour : MonoBehaviour
             }
         }
         return walker;
+    }
+
+    // The hammer is the game's build tool: the toolbelt slot in hand holds a tool definition flagged buildTool.
+    // The builder component beside the walker already answers that, with prototype tools ruled out.
+    [HideFromIl2Cpp]
+    private bool HammerAllows(MoonWalker player)
+    {
+        if (!Plugin.HammerOnly.Value)
+            return true;
+        if (player == null)
+            return false;
+        if (builder == null)
+            builder = player.GetComponent<MoonDepotBuilder>();
+        return builder != null && builder.HoldingBuildTool;
     }
 
     // The game's own interaction prompt card while a splitter or merger is in reach. It steps aside for the game's
@@ -235,7 +261,7 @@ public sealed class PriorityBehaviour : MonoBehaviour
             return;
         }
         var player = Walker();
-        if (player == null || player.UIBlocked || player.Mounted)
+        if (player == null || player.UIBlocked || player.Mounted || !HammerAllows(player))
         {
             HidePrompt();
             return;

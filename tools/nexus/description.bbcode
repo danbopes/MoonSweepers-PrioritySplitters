@@ -2,7 +2,7 @@
 
 Splitters in Moon Sweepers always alternate: one capsule left, one right, no matter what is waiting on either side. Mergers do the same with their inputs. That makes it impossible to say "feed the press first and only send the overflow to storage", or "always let the main line through and squeeze the side line in when there is room".
 
-This mod gives every splitter a [b]priority output[/b] and every merger a [b]priority input[/b]. Walk up to a machine, press [b]P[/b], and it cycles through [b]left first[/b], [b]right first[/b] and back to the vanilla [b]round-robin[/b]. The S cone on a splitter and the M cone on a merger lean toward the priority lane so you can read the setting from across the base. Machines you never touch keep behaving exactly like vanilla.
+This mod gives every splitter a [b]priority output[/b] and every merger a [b]priority input[/b]. Walk up to a machine with the hammer out, press [b]P[/b], and it cycles through [b]left first[/b], [b]right first[/b] and back to the vanilla [b]round-robin[/b]. The S cone on a splitter and the M cone on a merger lean toward the priority lane so you can read the setting from across the base. Machines you never touch keep behaving exactly like vanilla.
 
 [size=3][b]How it works[/b][/size]
 
@@ -20,7 +20,7 @@ A backed-up lane is detected from the capsules themselves, not from a counter, s
 [list=1]
 [*]Install BepInEx 6.0.0-be.791 (Unity.IL2CPP win-x64) and the [url=https://www.nexusmods.com/moonsweepers/mods/9]Moon Sweepers BepInEx Patcher[/url] first. Stock BepInEx cannot load plugins on this game without the patcher.
 [*]Extract this mod into the game folder (where MoonSweepers.exe is), so the DLL ends up at [b]BepInEx\plugins\PrioritySplitters\PrioritySplitters.dll[/b].
-[*]Start the game and load a save. Look at a splitter or merger from within 6 m; the game's key prompt shows [b]P  Change priority[/b] with the current setting. Press P to cycle it.
+[*]Start the game and load a save. Take out the hammer and look at a splitter or merger from within 6 m; the game's key prompt shows [b]P  Change priority[/b] with the current setting. Press P to cycle it.
 [/list]
 
 To uninstall, delete the BepInEx\plugins\PrioritySplitters folder. Your saves are untouched: priorities are stored next to the BepInEx config, not in the save file, and the machines simply go back to round-robin.
@@ -28,7 +28,7 @@ To uninstall, delete the BepInEx\plugins\PrioritySplitters folder. Your saves ar
 [size=3][b]Main features[/b][/size]
 
 [list]
-[*]Priority output per splitter and priority input per merger, toggled in game with one key.
+[*]Priority output per splitter and priority input per merger, toggled in game with one key while the hammer is out.
 [*]The S and M cones lean toward the priority lane; round-robin machines stand upright.
 [*]The game's own key prompt shows the toggle key and the current priority while you look at a machine in reach.
 [*]Settings are remembered per save slot (BepInEx\config\PrioritySplitters\slot-N.json), so each save keeps its own layout.
@@ -39,6 +39,7 @@ Settings in BepInEx\config\danbopes.moonsweepers.prioritysplitters.cfg (created 
 
 [list]
 [*][b]ToggleKey[/b] - key that cycles the priority of the machine you are looking at (default p).
+[*][b]HammerOnly[/b] - only toggle a machine, and only show its prompt, while the hammer is in hand (default on).
 [*][b]ReachMeters[/b] - how close you have to be to toggle a machine and to see its prompt (default 6).
 [*][b]LeanDegrees[/b] - how far the S and M cones lean (default 20; 0 hides the indicator).
 [*][b]ShowPrompt[/b] - show the key prompt (default on).
