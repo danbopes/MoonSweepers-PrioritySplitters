@@ -11,3 +11,6 @@ save-backups/
 *.user
 release/
 .playwright-mcp/
+.claude/skills/publish/
+tools/publish/headed-chrome.sh
+tools/publish/nexus/
